@@ -129,20 +129,20 @@ defmodule BeamScopeMcp.Tools.Trace do
     """
     File.write!(filepath, header)
 
-    # Set up counter
-    call_count = :counters.new(1, [:atomics])
+    # Set up counter (index 1 = call count, index 2 = whether we've written the stop message)
+    counters = :counters.new(2, [:atomics])
 
     # Set up dbg tracer that writes to file
     :dbg.tracer(:process, {fn msg, _state ->
-      count = :counters.get(call_count, 1) + 1
-      :counters.put(call_count, 1, count)
+      count = :counters.get(counters, 1) + 1
+      :counters.put(counters, 1, count)
 
       line = format_trace_event(msg, count)
       File.write!(filepath, line, [:append])
 
-      if count >= max_calls do
-        # Signal we've hit the limit
-        File.write!(filepath, "\n# Stopped: reached #{max_calls} call limit\n", [:append])
+      if count >= max_calls and :counters.get(counters, 2) == 0 do
+        :counters.put(counters, 2, 1)
+        File.write!(filepath, "\n# Stopped: reached #{max_calls} call limit (#{count} calls captured)\n", [:append])
         :dbg.stop_clear()
       end
 
@@ -167,7 +167,7 @@ defmodule BeamScopeMcp.Tools.Trace do
     Process.sleep(max_seconds * 1000)
 
     # Clean up
-    final_count = :counters.get(call_count, 1)
+    final_count = :counters.get(counters, 1)
     :dbg.stop_clear()
 
     File.write!(filepath, "\n# Stopped: reached #{max_seconds} second time limit (#{final_count} calls captured)\n", [:append])
