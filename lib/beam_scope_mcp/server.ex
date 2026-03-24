@@ -95,6 +95,21 @@ defmodule BeamScopeMcp.Server do
       {:ok, %{"action" => "get_docs"} = params} ->
         handle_tool_result(BeamScopeMcp.Tools.Docs.get_docs(params))
 
+      {:ok, %{"action" => "recompile"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Recompile.recompile(params))
+
+      {:ok, %{"action" => "get_system_stats"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.SystemStats.get_system_stats(params))
+
+      {:ok, %{"action" => "list_processes"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Processes.list_processes(params))
+
+      {:ok, %{"action" => "get_process_info"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Processes.get_process_info(params))
+
+      {:ok, %{"action" => "get_process_state"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Processes.get_process_state(params))
+
       {:ok, command} ->
         Logger.warning("BeamScopeMcp received unknown command: #{inspect(command)}")
         %{error: "Unknown command", command: command}

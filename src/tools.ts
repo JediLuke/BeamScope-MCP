@@ -108,6 +108,94 @@ Examples:
         },
       },
     },
+    {
+      name: 'recompile',
+      description: `Recompile the current Elixir project from within the running BEAM.
+
+Returns compilation output including any errors or warnings. This gives a fast feedback loop without needing to shell out to mix compile.
+
+Note: this recompiles the project code only, not dependencies. Use project_eval with Mix.Task.run("deps.compile", ["--force"]) for deps.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'get_system_stats',
+      description: `Get BEAM runtime metrics: memory usage, scheduler info, process counts, uptime, IO stats.
+
+Use this to understand the health and resource usage of the running Elixir application.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'list_processes',
+      description: `List running BEAM processes with filtering and sorting options.
+
+Use to find processes by name, find processes with large message queues, or sort by memory usage. Returns up to 50 processes by default.`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          limit: {
+            type: 'integer',
+            description: 'Max processes to return (default: 50)',
+          },
+          sort_by: {
+            type: 'string',
+            enum: ['memory', 'message_queue_len', 'reductions'],
+            description: 'Sort processes by this field (descending)',
+          },
+          min_message_queue: {
+            type: 'integer',
+            description: 'Only show processes with at least this many messages in their queue',
+          },
+          name_filter: {
+            type: 'string',
+            description: 'Filter by registered name (case-insensitive substring match)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_process_info',
+      description: `Get detailed information about a specific BEAM process: current function, memory, message queue, links, monitors, stacktrace.
+
+Accepts a PID string like "<0.123.0>" or a registered process name.`,
+      inputSchema: {
+        type: 'object',
+        required: ['pid'],
+        properties: {
+          pid: {
+            type: 'string',
+            description: 'PID string (e.g. "<0.123.0>") or registered name (e.g. "MyApp.Worker")',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_process_state',
+      description: `Get the internal state of a GenServer or other OTP process using :sys.get_state.
+
+Works on any process implementing the system message protocol (GenServer, gen_statem, etc). Accepts a PID string or registered name.
+
+Note: may timeout if the process is busy or doesn't support :sys messages.`,
+      inputSchema: {
+        type: 'object',
+        required: ['pid'],
+        properties: {
+          pid: {
+            type: 'string',
+            description: 'PID string (e.g. "<0.123.0>") or registered name (e.g. "MyApp.Worker")',
+          },
+          timeout: {
+            type: 'integer',
+            description: 'Timeout in milliseconds (default: 5000)',
+          },
+        },
+      },
+    },
   ];
 }
 
@@ -126,6 +214,16 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return await handleProjectEval(args);
     case 'get_docs':
       return await handleGetDocs(args);
+    case 'recompile':
+      return await handleForward('recompile', args);
+    case 'get_system_stats':
+      return await handleForward('get_system_stats', args);
+    case 'list_processes':
+      return await handleForward('list_processes', args);
+    case 'get_process_info':
+      return await handleForward('get_process_info', args);
+    case 'get_process_state':
+      return await handleForward('get_process_state', args);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],
@@ -328,6 +426,36 @@ async function handleProjectEval(args: Record<string, unknown>): Promise<ToolRes
       content: [{
         type: 'text',
         text: `Error evaluating code: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }],
+      isError: true,
+    };
+  }
+}
+
+async function handleForward(action: string, args: Record<string, unknown>): Promise<ToolResponse> {
+  try {
+    const notConnected = await requireConnection();
+    if (notConnected) return notConnected;
+
+    const command = { action, ...args };
+    const response = await sendToElixir(command);
+    const data = JSON.parse(response);
+
+    if (data.error) {
+      return {
+        content: [{ type: 'text', text: `Error: ${data.error}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: data.result || JSON.stringify(data, null, 2) }],
+    };
+  } catch (error) {
+    return {
+      content: [{
+        type: 'text',
+        text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       }],
       isError: true,
     };
