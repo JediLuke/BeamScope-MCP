@@ -1,78 +1,44 @@
 # BeamScope MCP Roadmap
 
-## Phase 1: Observer-Like Introspection Tools
+## Implemented
 
-These tools leverage the BEAM's exceptional introspection capabilities and would be valuable for any Elixir application.
+### Phase 1: Observer-Like Introspection Tools ✅
 
-### `get_system_stats`
+- **`get_system_stats`** — Memory, schedulers, process counts, uptime, IO stats via `:erlang.memory/0`, `:erlang.system_info/1`, `:erlang.statistics/1`
+- **`list_processes`** — Filterable/sortable process listing (by name, memory, message queue size)
+- **`get_process_info`** — Detailed info for a specific process (function, memory, links, monitors, stacktrace)
+- **`get_process_state`** — `:sys.get_state/1` for GenServers and OTP processes
+- **`get_process_dictionary`** — Read process dictionary metadata (Logger metadata, custom flags, etc.)
 
-Runtime metrics and memory usage. Calls into:
-- `:erlang.memory/0` — per-type memory breakdown (total, processes, atoms, binary, ets, etc.)
-- `:erlang.system_info/1` — schedulers, process count, port count, atom count
-- `:erlang.statistics/1` — uptime, reductions, IO, garbage collection stats
+### Phase 2: Compilation & Config Tools ✅
 
-Goal: return a useful snapshot of the BEAM's state so we can understand system health at a glance.
+- **`recompile`** — Recompile project from within the BEAM via `IEx.Helpers.recompile/0`
+- **`recompile_deps`** — Force recompile dependencies via `Mix.Task.run("deps.compile", args)`. Args required (no defaults).
+- **`get_app_config`** — Runtime application config (what the BEAM actually has loaded, not what's on disk). App name required.
 
-### `list_processes`
+### Phase 3: Advanced Introspection (partial) ✅
 
-List running processes with filtering options. Filter by:
-- Registered name
-- Module (current function's module)
-- Message queue size (e.g. find processes with large mailboxes)
+- **`get_supervision_tree`** — Recursive walk of OTP supervision tree. App name required (no guessing).
+- **`list_ets_tables`** — All ETS tables with size, memory, type, protection, owner
+- **`inspect_ets_table`** — Read ETS table contents with row limit and truncation notice
 
-Uses:
-- `Process.list/0`
-- `Process.info(pid, [:registered_name, :current_function, :message_queue_len, :memory, :status])`
+### Core Tools (from initial release) ✅
 
-### `get_process_info`
+- **`connect_beam_scope_mcp`** — Establish TCP connection (port from env var, no defaults)
+- **`get_beam_scope_mcp_status`** — Connection status check
+- **`get_logs`** — Application logs with tail/grep/level filtering
+- **`project_eval`** — Evaluate Elixir code in the running app with timeout
+- **`get_docs`** — Local documentation for modules/functions via `Code.fetch_docs/1`
 
-Detailed information about a specific process.
-
-Uses `Process.info(pid)` with useful keys:
-- `:registered_name`
-- `:current_function`
-- `:initial_call`
-- `:message_queue_len`
-- `:memory`
-- `:status`
-- `:links`
-- `:monitors`
-- `:trap_exit`
-- `:reductions`
-
-### `get_process_state`
-
-Get the internal state of any GenServer/process.
-
-Uses `:sys.get_state/1` — works on any process that implements the system message protocol (GenServer, gen_statem, etc.).
-
-Accepts a PID or registered name.
+**Total: 16 tools implemented**
 
 ---
 
-## Phase 2: Compilation Tools
+## Not Yet Implemented
 
-Fast feedback loop for AI agents — recompile without leaving the BEAM.
+### Phase 2 remaining
 
-### `recompile`
-
-Recompile the current project from within the running app.
-
-Implementation options:
-- `IEx.Helpers.recompile/0`
-- `Mix.Task.run("compile")` directly
-
-Must report compilation errors and warnings back to the LLM. This gives agents a tight edit-compile-check loop without needing to shell out to `mix compile`.
-
-### `recompile_deps`
-
-Force recompile of dependencies.
-
-Uses `Mix.Task.run("deps.compile", args)` where args can include:
-- `["--force"]` — recompile all deps
-- `["jason", "--force"]` — recompile a single dependency
-
-### `stop_app` / `start_app`
+#### `stop_app` / `start_app`
 
 Stop and start the host application. Separate tools rather than a single `restart_app` — gives agents more control.
 
@@ -83,52 +49,9 @@ Stop and start the host application. Separate tools rather than a single `restar
 
 Also: stopping the app will likely kill the TCP connection. The TypeScript bridge will auto-reconnect, but the agent needs to know it may need to call `connect_beam_scope_mcp` again after a restart.
 
-### `get_app_config`
+### Phase 3 remaining
 
-Retrieve runtime application config. Unlike reading config files on disk, this returns what the BEAM actually has loaded — including runtime.exs overrides, env var substitutions, and any dynamic `Application.put_env` changes.
-
-Uses `Application.get_all_env(:app)` or `Application.get_env(:app, :key)`.
-
-Accepts:
-- `app` (required) — the application name
-- `key` (optional) — specific config key, omit for all config
-
----
-
-## Phase 3: Advanced Introspection
-
-### `list_ets_tables`
-
-List all ETS tables with metadata.
-
-Uses `:ets.all/0` to get table IDs, then `:ets.info/1` for each to return name, size, memory, type, owner, protection level, etc.
-
-### `get_process_dictionary`
-
-Read the process dictionary for a specific process. Complements `get_process_state` (which uses `:sys.get_state`) — the process dictionary often contains metadata that state doesn't show (Logger metadata, custom flags, step context, etc.).
-
-Uses `Process.info(pid, :dictionary)`.
-
-### `inspect_ets_table`
-
-Read contents of an ETS table. For small tables use `:ets.tab2list/1`. For large tables support match patterns via `:ets.match/2` or `:ets.match_object/2` to avoid dumping the entire table.
-
-Accepts:
-- `table` (required) — table name or ID
-- `match_pattern` (optional) — Erlang match spec to filter results
-- `limit` (optional) — max rows to return
-
-### `get_supervision_tree`
-
-Recursively walk the supervision tree from an application's top supervisor. Shows the full hierarchy of supervisors and workers with their PIDs, restart strategies, and status.
-
-Likely uses `Supervisor.which_children/1` recursively — for each child that is itself a supervisor, descend and fetch its children too. Could also pull `Supervisor.count_children/1` for summary stats at each level.
-
-Accepts:
-- `app` (optional) — application name, defaults to the host app
-- `depth` (optional) — max recursion depth
-
-### `trace_calls`
+#### `trace_calls`
 
 Lightweight function call tracing using `:dbg` (modern OTP) or `:recon_trace`.
 
@@ -137,21 +60,40 @@ Available `:dbg` functions: `:dbg.tracer/0`, `:dbg.p/2`, `:dbg.tp/2` — use the
 Accepts:
 - `module` (required) — module to trace
 - `function` (optional) — specific function, omit for all functions in module
-- `max_calls` (optional) — stop after n calls (safety limit)
-- `max_seconds` (optional) — auto-stop after n seconds (safety limit)
+- `max_calls` (required) — stop after n calls (safety limit)
+- `max_seconds` (required) — auto-stop after n seconds (safety limit)
 
 **Design considerations:**
 - Must be time-limited — auto-stop after n seconds or m calls, whichever comes first
 - Output captured and returned as a batch, not streamed
 - Be careful with high-traffic functions — a busy GenServer could generate thousands of trace events per second
 - Always clean up traces on completion (`:dbg.stop_clear/0`)
-- Consider a default cap (e.g. 100 calls, 10 seconds) to prevent accidental overload
 
-### `get_message_queue` (maybe)
+#### `get_message_queue` (maybe)
 
 Read the message queue for a specific process. Uses `Process.info(pid, :messages)`.
 
 **Warning:** Message queues can be enormous — must limit/truncate output. Might not justify a dedicated tool since `get_process_info` already returns `:message_queue_len` (so the agent knows *if* there's a backlog) and `project_eval` can do `Process.info(pid, :messages)` for one-off inspection. Keep as a candidate but don't prioritise.
+
+### Phase 4: Code Intelligence
+
+These may overlap with what coding agents already do via file reading and static analysis, but having them available from the running BEAM gives access to compiled metadata that isn't easily derived from source files alone.
+
+#### `get_module_info`
+
+Return metadata about a compiled module. Uses `Module.info/1` or `:erlang.module_info/1` — exports, attributes, compile options, source file path, etc.
+
+#### `get_type_info`
+
+Surface Dialyzer or type information for modules/functions. Especially relevant as newer Elixir versions (1.17+) are adding more type-based features — gradual typing, type inference, compile-time type warnings.
+
+Implementation TBD — may need to read `.beam` debug info chunks or integrate with Dialyzer PLT files.
+
+#### `xref_callers`
+
+Find all callers of a given function across the project. Uses `Mix.Tasks.Xref` — equivalent to `mix xref callers Module.function/arity`.
+
+Useful for impact analysis: "what breaks if I change this function?"
 
 ---
 
@@ -169,37 +111,23 @@ The right alternative is the non-blocking tools above: `get_process_state`, `get
 
 ---
 
-## Phase 4: Code Intelligence
+## Design Principles
 
-These may overlap with what coding agents already do via file reading and static analysis, but having them available from the running BEAM gives access to compiled metadata that isn't easily derived from source files alone.
+### No Default Ports — Fail Loudly
 
-### `get_module_info`
+Every port must be explicitly configured. No guessing, no fallbacks. If the port isn't set, the app crashes with a clear error message.
 
-Return metadata about a compiled module. Uses `Module.info/1` or `:erlang.module_info/1` — exports, attributes, compile options, source file path, etc.
+### No Default Identifiers — Require Specificity
 
-### `get_type_info`
+Tools that operate on apps, processes, or tables require the caller to specify exactly what they want. No "default to the host app" or "guess the first supervisor". If the agent doesn't know what to ask for, the error message tells it how to find out.
 
-Surface Dialyzer or type information for modules/functions. Especially relevant as newer Elixir versions (1.17+) are adding more type-based features — gradual typing, type inference, compile-time type warnings.
-
-Implementation TBD — may need to read `.beam` debug info chunks or integrate with Dialyzer PLT files.
-
-### `xref_callers`
-
-Find all callers of a given function across the project. Uses `Mix.Tasks.Xref` — equivalent to `mix xref callers Module.function/arity`.
-
-Useful for impact analysis: "what breaks if I change this function?"
-
----
-
-## Safety & Guardrails
-
-Some tools can return massive data or have side effects. General principles:
+### Safety & Guardrails
 
 - **Timeouts everywhere** — `project_eval` already has one. Any tool that executes code or waits for results needs a timeout.
 - **Memory limits** — `project_eval` could potentially allocate unbounded memory. Consider capping inspect output size.
 - **Auto-stop for tracing** — `trace_calls` must always auto-stop after n calls or n seconds. No open-ended traces.
 - **Disconnection warnings** — `stop_app`/`start_app` will kill the TCP connection. Tool descriptions must warn the LLM to expect a pause and reconnect.
-- **Row/size limits on large data** — `inspect_ets_table`, `get_message_queue`, `list_processes` can all return enormous results. Default to sensible limits (e.g. 100 rows) and give the LLM options to narrow down: filters, match patterns, limit/offset.
+- **Row/size limits on large data** — `inspect_ets_table`, `get_message_queue`, `list_processes` can all return enormous results. Sensible limits with options to narrow down: filters, match patterns, limit/offset.
 - **Truncation with notice** — when output is truncated, always tell the LLM it was truncated and how much was omitted, so it knows to refine its query rather than assume it has the full picture.
 
 ---
@@ -212,10 +140,10 @@ Reload a single compiled module without recompiling the whole project. `Code.com
 
 ### Ideas considered but deprioritised
 
-- **Port discovery tool** — Cool idea, but the tool descriptions already guide the LLM to look in the Elixir config files. Once you know the port you're there, and a discovery tool would just be doing what the instructions already say.
-- **Config diffing** (runtime vs files on disk) — Theoretically useful but config drift rarely happens in practice. Not worth a dedicated tool.
+- **Port discovery tool** — The tool descriptions already guide the LLM to look in the Elixir config files. A discovery tool would just be doing what the instructions already say.
+- **Config diffing** (runtime vs files on disk) — Theoretically useful but config drift rarely happens in practice.
 - **Registry/PubSub inspection** — `Registry.select/2` etc. Could be useful for some apps, but too framework-specific for core BeamScope. Can always be done via `project_eval`.
 
 ### Architectural note
 
-As the tool count grows, `server.ex`'s dispatch function will get long. Consider a tool registry pattern where each tool module registers itself, rather than a growing case statement. Not urgent at 5 tools, worth thinking about at 20+.
+As the tool count grows, `server.ex`'s dispatch function will get long. Consider a tool registry pattern where each tool module registers itself, rather than a growing case statement. Not urgent at 16 tools, worth thinking about at 20+.

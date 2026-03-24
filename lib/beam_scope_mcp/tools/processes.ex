@@ -115,6 +115,39 @@ defmodule BeamScopeMcp.Tools.Processes do
     end
   end
 
+  @doc """
+  Get the process dictionary for a specific process.
+
+  Params:
+  - "pid" (required) — PID string or registered name
+  """
+  def get_process_dictionary(params) do
+    case resolve_pid(params["pid"]) do
+      {:ok, pid} ->
+        case Process.info(pid, :dictionary) do
+          {:dictionary, dict} ->
+            formatted =
+              dict
+              |> Enum.map(fn {k, v} ->
+                "#{inspect(k)}: #{inspect(v, pretty: true, limit: 30)}"
+              end)
+              |> Enum.join("\n\n")
+
+            if formatted == "" do
+              {:ok, "Process dictionary is empty"}
+            else
+              {:ok, "Process dictionary (#{length(dict)} entries):\n\n#{formatted}"}
+            end
+
+          nil ->
+            {:error, "Process #{inspect(pid)} is not alive"}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # ── Helpers ──
 
   defp resolve_pid(nil), do: {:error, "\"pid\" parameter is required"}

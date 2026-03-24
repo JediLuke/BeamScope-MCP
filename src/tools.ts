@@ -196,6 +196,109 @@ Note: may timeout if the process is busy or doesn't support :sys messages.`,
         },
       },
     },
+    {
+      name: 'get_process_dictionary',
+      description: `Read the process dictionary for a specific process. Complements get_process_state — the process dictionary often contains metadata not visible in state (Logger metadata, custom flags, step context, etc.).
+
+Accepts a PID string like "<0.123.0>" or a registered process name.`,
+      inputSchema: {
+        type: 'object',
+        required: ['pid'],
+        properties: {
+          pid: {
+            type: 'string',
+            description: 'PID string (e.g. "<0.123.0>") or registered name',
+          },
+        },
+      },
+    },
+    {
+      name: 'recompile_deps',
+      description: `Force recompile of Elixir dependencies.
+
+Use when a local path dependency has changed and needs recompiling, or to force-rebuild all deps. You MUST specify the args parameter.`,
+      inputSchema: {
+        type: 'object',
+        required: ['args'],
+        properties: {
+          args: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Args passed to mix deps.compile (required). E.g. ["--force"] for all deps, or ["jason", "--force"] for a single dep.',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_app_config',
+      description: `Get runtime application configuration. Unlike reading config files on disk, this returns what the BEAM actually has loaded — including runtime.exs overrides, env var substitutions, and dynamic Application.put_env changes.
+
+Returns all config for an app, or a specific key.`,
+      inputSchema: {
+        type: 'object',
+        required: ['app'],
+        properties: {
+          app: {
+            type: 'string',
+            description: 'Application name (e.g. "merlinex", "phoenix", "beam_scope_mcp")',
+          },
+          key: {
+            type: 'string',
+            description: 'Specific config key (optional — omit for all config)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_supervision_tree',
+      description: `Get the OTP supervision tree for an application. Recursively walks supervisors showing the full hierarchy of processes with PIDs, types, and child counts.
+
+You MUST specify the app name. Use get_app_config or project_eval with Application.started_applications() to find app names if unsure.`,
+      inputSchema: {
+        type: 'object',
+        required: ['app'],
+        properties: {
+          app: {
+            type: 'string',
+            description: 'Application name (required — e.g. "merlinex", "phoenix")',
+          },
+          depth: {
+            type: 'integer',
+            description: 'Max recursion depth (default: 10)',
+          },
+        },
+      },
+    },
+    {
+      name: 'list_ets_tables',
+      description: `List all ETS tables with metadata: name, size, memory usage, type, protection level, owner.
+
+Sorted by memory usage descending. Use to discover what ETS tables exist before inspecting their contents.`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    {
+      name: 'inspect_ets_table',
+      description: `Read the contents of an ETS table. Returns rows from the table, limited to avoid massive output.
+
+Use list_ets_tables first to find table names, then inspect specific tables.`,
+      inputSchema: {
+        type: 'object',
+        required: ['table'],
+        properties: {
+          table: {
+            type: 'string',
+            description: 'ETS table name (e.g. "my_cache"). Use list_ets_tables to find names.',
+          },
+          limit: {
+            type: 'integer',
+            description: 'Max rows to return (default: 20)',
+          },
+        },
+      },
+    },
   ];
 }
 
@@ -224,6 +327,18 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return await handleForward('get_process_info', args);
     case 'get_process_state':
       return await handleForward('get_process_state', args);
+    case 'get_process_dictionary':
+      return await handleForward('get_process_dictionary', args);
+    case 'recompile_deps':
+      return await handleForward('recompile_deps', args);
+    case 'get_app_config':
+      return await handleForward('get_app_config', args);
+    case 'get_supervision_tree':
+      return await handleForward('get_supervision_tree', args);
+    case 'list_ets_tables':
+      return await handleForward('list_ets_tables', args);
+    case 'inspect_ets_table':
+      return await handleForward('inspect_ets_table', args);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],

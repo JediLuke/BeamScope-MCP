@@ -110,6 +110,24 @@ defmodule BeamScopeMcp.Server do
       {:ok, %{"action" => "get_process_state"} = params} ->
         handle_tool_result(BeamScopeMcp.Tools.Processes.get_process_state(params))
 
+      {:ok, %{"action" => "get_process_dictionary"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Processes.get_process_dictionary(params))
+
+      {:ok, %{"action" => "recompile_deps"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Recompile.recompile_deps(params))
+
+      {:ok, %{"action" => "get_app_config"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.AppConfig.get_app_config(params))
+
+      {:ok, %{"action" => "get_supervision_tree"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.SupervisionTree.get_supervision_tree(params))
+
+      {:ok, %{"action" => "list_ets_tables"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Ets.list_ets_tables(params))
+
+      {:ok, %{"action" => "inspect_ets_table"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Ets.inspect_ets_table(params))
+
       {:ok, command} ->
         Logger.warning("BeamScopeMcp received unknown command: #{inspect(command)}")
         %{error: "Unknown command", command: command}
