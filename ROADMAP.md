@@ -22,6 +22,11 @@
 - **`list_ets_tables`** — All ETS tables with size, memory, type, protection, owner
 - **`inspect_ets_table`** — Read ETS table contents with row limit and truncation notice
 
+### Tracing ✅
+
+- **`trace_calls`** — Trace function calls on a module via `:dbg`. Writes to file in `/tmp/beam_scope_traces/` — agent reads results with normal file tools. Auto-stops at call/time limit. max_calls and max_seconds required (capped at 200/30).
+- **`stop_trace`** — Abort a running trace early. Not normally needed — traces auto-clean-up.
+
 ### Core Tools (from initial release) ✅
 
 - **`connect_beam_scope_mcp`** — Establish TCP connection (port from env var, no defaults)
@@ -30,7 +35,7 @@
 - **`project_eval`** — Evaluate Elixir code in the running app with timeout
 - **`get_docs`** — Local documentation for modules/functions via `Code.fetch_docs/1`
 
-**Total: 16 tools implemented**
+**Total: 18 tools implemented**
 
 ---
 
@@ -50,24 +55,6 @@ Stop and start the host application. Separate tools rather than a single `restar
 Also: stopping the app will likely kill the TCP connection. The TypeScript bridge will auto-reconnect, but the agent needs to know it may need to call `connect_beam_scope_mcp` again after a restart.
 
 ### Phase 3 remaining
-
-#### `trace_calls`
-
-Lightweight function call tracing using `:dbg` (modern OTP) or `:recon_trace`.
-
-Available `:dbg` functions: `:dbg.tracer/0`, `:dbg.p/2`, `:dbg.tp/2` — use these to trace calls to specific modules/functions, capture arguments and return values, and optionally measure timing.
-
-Accepts:
-- `module` (required) — module to trace
-- `function` (optional) — specific function, omit for all functions in module
-- `max_calls` (required) — stop after n calls (safety limit)
-- `max_seconds` (required) — auto-stop after n seconds (safety limit)
-
-**Design considerations:**
-- Must be time-limited — auto-stop after n seconds or m calls, whichever comes first
-- Output captured and returned as a batch, not streamed
-- Be careful with high-traffic functions — a busy GenServer could generate thousands of trace events per second
-- Always clean up traces on completion (`:dbg.stop_clear/0`)
 
 #### `get_message_queue` (maybe)
 
@@ -94,6 +81,16 @@ Implementation TBD — may need to read `.beam` debug info chunks or integrate w
 Find all callers of a given function across the project. Uses `Mix.Tasks.Xref` — equivalent to `mix xref callers Module.function/arity`.
 
 Useful for impact analysis: "what breaks if I change this function?"
+
+#### Dialyzer integration (musing)
+
+Run Dialyzer analysis from within the BEAM and surface type warnings/errors. Could wrap `Mix.Task.run("dialyzer")` or interact with PLT files directly. Potentially very useful for LLMs to catch type errors, but Dialyzer is slow and can be noisy. Might work better as a "run and write results to file" pattern like trace_calls.
+
+#### Credo integration (musing)
+
+Run Credo analysis and return style/consistency warnings. Similar consideration — could wrap `Mix.Task.run("credo")` and return results. Arguably less useful than Dialyzer since LLMs already have good instincts about code style, and Credo's opinions don't always align with what the user wants.
+
+Both of these fall under the general principle: any tool that improves code intelligence and leverages the running BEAM has an argument for living in BeamScope. Whether they're worth dedicated tools vs just using `project_eval` to run the mix tasks is an open question.
 
 ---
 

@@ -299,6 +299,53 @@ Use list_ets_tables first to find table names, then inspect specific tables.`,
         },
       },
     },
+    {
+      name: 'trace_calls',
+      description: `Start tracing function calls on a module. This tool does NOT return the trace results directly — it writes them to a file and returns the file path.
+
+WORKFLOW:
+1. Call this tool → you get back a file path (e.g. /tmp/beam_scope_traces/MyModule_20260323_221503.log)
+2. Wait a few seconds for the trace to collect events
+3. Read the file using your normal file reading tools (Read tool) to see the trace results
+4. The trace auto-stops when it hits max_calls or max_seconds — you do NOT need to call stop_trace
+
+WHY A FILE: Traces collect events over time and can be large. Writing to a file lets you read just the parts you need (head, tail, grep for patterns).
+
+The file contains timestamped entries like:
+  [22:15:03.001] #1 #PID<0.599.0> MyModule.my_function("arg1", 42)
+
+All parameters except function are REQUIRED. max_calls capped at 200, max_seconds capped at 30.`,
+      inputSchema: {
+        type: 'object',
+        required: ['module', 'max_calls', 'max_seconds'],
+        properties: {
+          module: {
+            type: 'string',
+            description: 'Module to trace (e.g. "Merlinex.Core.Manager"). Required.',
+          },
+          function: {
+            type: 'string',
+            description: 'Specific function name (optional — omit to trace all functions in the module)',
+          },
+          max_calls: {
+            type: 'integer',
+            description: 'Stop after this many calls (required, max 200)',
+          },
+          max_seconds: {
+            type: 'integer',
+            description: 'Stop after this many seconds (required, max 30)',
+          },
+        },
+      },
+    },
+    {
+      name: 'stop_trace',
+      description: 'Abort a running trace early. You do not normally need to call this — traces auto-stop when they hit their max_calls or max_seconds limit and clean up after themselves. This is only useful if you want to cancel a trace before it finishes on its own. Safe to call even if no trace is running.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
   ];
 }
 
@@ -339,6 +386,10 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return await handleForward('list_ets_tables', args);
     case 'inspect_ets_table':
       return await handleForward('inspect_ets_table', args);
+    case 'trace_calls':
+      return await handleForward('trace_calls', args);
+    case 'stop_trace':
+      return await handleForward('stop_trace', args);
     default:
       return {
         content: [{ type: 'text', text: `Unknown tool: ${name}` }],

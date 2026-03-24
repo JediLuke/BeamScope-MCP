@@ -128,6 +128,12 @@ defmodule BeamScopeMcp.Server do
       {:ok, %{"action" => "inspect_ets_table"} = params} ->
         handle_tool_result(BeamScopeMcp.Tools.Ets.inspect_ets_table(params))
 
+      {:ok, %{"action" => "trace_calls"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Trace.trace_calls(params))
+
+      {:ok, %{"action" => "stop_trace"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Trace.stop_trace(params))
+
       {:ok, command} ->
         Logger.warning("BeamScopeMcp received unknown command: #{inspect(command)}")
         %{error: "Unknown command", command: command}
