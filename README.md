@@ -48,7 +48,18 @@ This prevents the maddening situation where your Elixir app is listening on one 
 
 ## Installation
 
-### 1. Add to your Elixir project
+BeamScope MCP has two components: an Elixir library (TCP server + tools) and a TypeScript bridge (MCP protocol). Both run locally — **clone the repo first**, then reference it as a path dependency.
+
+### 1. Clone the repo
+
+```bash
+cd ~/your/projects  # or wherever you keep local deps
+git clone https://github.com/JediLuke/BeamScope-MCP.git beam_scope_mcp
+```
+
+### 2. Add to your Elixir project
+
+Reference the cloned repo as a path dependency:
 
 ```elixir
 # mix.exs
@@ -59,11 +70,13 @@ def deps do
 end
 ```
 
+Adjust the path to wherever you cloned it relative to your project.
+
 ```bash
 mix deps.get
 ```
 
-### 2. Configure the port (required)
+### 3. Configure the port (required)
 
 ```elixir
 # config/config.exs (or config/dev.exs)
@@ -81,7 +94,7 @@ if port = System.get_env("BEAM_SCOPE_MCP_PORT") do
 end
 ```
 
-### 3. Build the TypeScript bridge
+### 4. Build the TypeScript bridge
 
 ```bash
 cd /path/to/beam_scope_mcp
@@ -89,7 +102,7 @@ npm install
 npm run build
 ```
 
-### 4. Configure your AI coding agent
+### 5. Configure your AI coding agent
 
 Add BeamScope to your project's `.mcp.json`:
 
