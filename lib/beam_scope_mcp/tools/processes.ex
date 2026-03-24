@@ -153,8 +153,25 @@ defmodule BeamScopeMcp.Tools.Processes do
   defp resolve_pid(nil), do: {:error, "\"pid\" parameter is required"}
 
   defp resolve_pid(pid_string) when is_binary(pid_string) do
-    # Try as registered name first
-    case pid_string |> String.to_atom() |> Process.whereis() do
+    # Try as registered name — with and without Elixir. prefix
+    names_to_try =
+      if String.starts_with?(pid_string, "Elixir.") do
+        [pid_string]
+      else
+        [pid_string, "Elixir." <> pid_string]
+      end
+
+    found = Enum.find_value(names_to_try, fn name ->
+      case name |> String.to_atom() |> Process.whereis() do
+        nil -> nil
+        pid -> {:ok, pid}
+      end
+    end)
+
+    case found do
+      {:ok, pid} ->
+        {:ok, pid}
+
       nil ->
         # Try parsing as PID string like "<0.123.0>" or "0.123.0"
         try do
@@ -162,11 +179,8 @@ defmodule BeamScopeMcp.Tools.Processes do
           pid = :erlang.list_to_pid(~c"<#{cleaned}>")
           if Process.alive?(pid), do: {:ok, pid}, else: {:error, "Process #{pid_string} is not alive"}
         rescue
-          _ -> {:error, "Could not resolve \"#{pid_string}\" — use a PID like \"<0.123.0>\" or a registered name"}
+          _ -> {:error, "Could not resolve \"#{pid_string}\" — use a PID like \"<0.123.0>\" or a registered name like \"Merlinex.Core.Manager\""}
         end
-
-      pid ->
-        {:ok, pid}
     end
   end
 

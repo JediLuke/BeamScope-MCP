@@ -34,10 +34,12 @@ export function getToolDefinitions() {
     },
     {
       name: 'get_logs',
-      description: `Retrieve application logs from the running Elixir app.
+      description: `Retrieve application logs from the running Elixir app. This is the ONLY way to see errors, warnings, and crash reports — no other tool provides log data. Must be called to know what's in the logs.
 
-Use this to check for errors, debug issues, or see what the application is doing.
-Logs are captured in a circular buffer so old logs may be discarded.`,
+WHEN TO USE: Diagnosing problems, checking for errors, understanding what the app is doing. Should typically be your first step when something seems wrong.
+NOT FOR: System resource usage (use get_system_stats). Process-level details (use get_process_info).
+
+Use grep to filter (e.g. "error", "warning", "timeout") and level to filter by severity. Logs are in a circular buffer so old entries may be discarded.`,
       inputSchema: {
         type: 'object',
         required: ['tail'],
@@ -60,16 +62,18 @@ Logs are captured in a circular buffer so old logs may be discarded.`,
     },
     {
       name: 'project_eval',
-      description: `Evaluate Elixir code in the context of the running application.
+      description: `Evaluate Elixir code in the context of the running application. This is the general-purpose escape hatch — use it when no specific tool exists for what you need.
 
-Use this to:
-- Test functions and modules
-- Inspect application state
-- Debug issues
-- Run queries or operations
+PREFER specific tools over project_eval when they exist:
+- Need logs? Use get_logs, not project_eval with Logger
+- Need process info? Use get_process_info/get_process_state, not project_eval with Process.info
+- Need to recompile? Use recompile or reload_module
+- Need ETS data? Use list_ets_tables/inspect_ets_table
+- Need docs? Use get_docs
+- Need callers? Use xref_callers
 
-The code runs with full access to your application's modules, dependencies, and runtime state.
-IEx helpers like exports/1 are available.`,
+Use project_eval for one-off operations that don't have a dedicated tool.
+The code runs with full access to your application's modules, dependencies, and runtime state.`,
       inputSchema: {
         type: 'object',
         required: ['code'],
@@ -87,16 +91,12 @@ IEx helpers like exports/1 are available.`,
     },
     {
       name: 'get_docs',
-      description: `Get documentation for an Elixir module or function.
+      description: `Get @moduledoc/@doc documentation for an Elixir module or function. Reads from compiled .beam files (local, no network).
 
-Returns the documentation for the given reference. Works for modules in the
-current project and all dependencies.
+WHEN TO USE: You need to understand what a function does, its parameters, or how to use a module.
+NOT FOR: Finding what calls a function (use xref_callers). Evaluating code (use project_eval).
 
-Examples:
-- "GenServer" - module docs
-- "String.split" - all arities of function
-- "String.split/2" - specific arity
-- "c:GenServer.handle_call/3" - callback docs (prefix with c:)`,
+Examples: "GenServer", "String.split", "String.split/2", "c:GenServer.handle_call/3" (prefix c: for callbacks).`,
       inputSchema: {
         type: 'object',
         required: ['reference'],
@@ -110,11 +110,10 @@ Examples:
     },
     {
       name: 'recompile',
-      description: `Recompile the current Elixir project from within the running BEAM.
+      description: `Recompile the entire project from within the running BEAM. Returns errors/warnings.
 
-Returns compilation output including any errors or warnings. This gives a fast feedback loop without needing to shell out to mix compile.
-
-Note: this recompiles the project code only, not dependencies. Use recompile_deps for deps.`,
+WHEN TO USE: After changing multiple files, or when you're not sure what changed. This is equivalent to mix compile.
+NOT FOR: Single file changes (use reload_module instead — much faster). Dependencies (use recompile_deps instead).`,
       inputSchema: {
         type: 'object',
         properties: {},
@@ -122,11 +121,10 @@ Note: this recompiles the project code only, not dependencies. Use recompile_dep
     },
     {
       name: 'reload_module',
-      description: `Hot-reload a single module from its source file into the running BEAM.
+      description: `Hot-reload a single module from its source file. Fastest possible feedback loop — change one file, reload it, test immediately.
 
-Compiles the file and loads the resulting module(s) without recompiling the whole project. This is the fastest possible feedback loop — change one file, reload just that module, test immediately.
-
-Use this instead of recompile when you've only changed a single file.`,
+WHEN TO USE: After changing a single .ex file. No full recompile needed.
+NOT FOR: Multiple file changes (use recompile). Dependencies (use recompile_deps).`,
       inputSchema: {
         type: 'object',
         required: ['file'],
@@ -140,9 +138,10 @@ Use this instead of recompile when you've only changed a single file.`,
     },
     {
       name: 'get_system_stats',
-      description: `Get BEAM runtime metrics: memory usage, scheduler info, process counts, uptime, IO stats.
+      description: `Get BEAM runtime health: memory usage, scheduler count, process/port/atom counts, uptime, IO throughput.
 
-Use this to understand the health and resource usage of the running Elixir application.`,
+WHEN TO USE: You want a system-level health snapshot — is memory growing? How many processes are running? How long has the app been up?
+NOT FOR: Application configuration (use get_app_config). Individual process details (use get_process_info). Checking for errors (use get_logs — system stats don't show errors).`,
       inputSchema: {
         type: 'object',
         properties: {},
@@ -150,9 +149,10 @@ Use this to understand the health and resource usage of the running Elixir appli
     },
     {
       name: 'list_processes',
-      description: `List running BEAM processes with filtering and sorting options.
+      description: `List running BEAM processes — find them by name, sort by memory or queue size. Returns summary info for each process.
 
-Use to find processes by name, find processes with large message queues, or sort by memory usage. Returns up to 50 processes by default.`,
+WHEN TO USE: You need to discover what processes exist, find a specific process by name, or identify processes using the most memory/having the largest queues.
+NEXT STEP: Once you have a PID or name, use get_process_info, get_process_state, or get_process_dictionary for details.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -178,9 +178,11 @@ Use to find processes by name, find processes with large message queues, or sort
     },
     {
       name: 'get_process_info',
-      description: `Get detailed information about a specific BEAM process: current function, memory, message queue, links, monitors, stacktrace.
+      description: `Get metadata ABOUT a process: what function it's running, memory usage, message queue length, links, monitors, stacktrace.
 
-Accepts a PID string like "<0.123.0>" or a registered process name.`,
+WHEN TO USE: You want to know what a process IS and what it's DOING — its identity and vital signs.
+NOT FOR: The data the process is holding (use get_process_state). Metadata in the process dictionary (use get_process_dictionary).
+Use list_processes first to find PIDs/names if you don't know them.`,
       inputSchema: {
         type: 'object',
         required: ['pid'],
@@ -194,10 +196,10 @@ Accepts a PID string like "<0.123.0>" or a registered process name.`,
     },
     {
       name: 'get_process_state',
-      description: `Get the internal state of a GenServer or other OTP process using :sys.get_state.
+      description: `Get the DATA a GenServer is holding — its internal state (the value in the GenServer's loop).
 
-Works on any process implementing the system message protocol (GenServer, gen_statem, etc). Accepts a PID string or registered name.
-
+WHEN TO USE: You want to see the actual data/state inside a process — what it's storing, its current values.
+NOT FOR: Process metadata like memory/links/stacktrace (use get_process_info). Process dictionary entries (use get_process_dictionary).
 Note: may timeout if the process is busy or doesn't support :sys messages.`,
       inputSchema: {
         type: 'object',
@@ -216,9 +218,10 @@ Note: may timeout if the process is busy or doesn't support :sys messages.`,
     },
     {
       name: 'get_process_dictionary',
-      description: `Read the process dictionary for a specific process. Complements get_process_state — the process dictionary often contains metadata not visible in state (Logger metadata, custom flags, step context, etc.).
+      description: `Read the process dictionary — hidden metadata stored outside the main state. Contains OTP internals like $ancestors, $initial_call, plus any custom entries (Logger metadata, step context, flags).
 
-Accepts a PID string like "<0.123.0>" or a registered process name.`,
+WHEN TO USE: You need metadata that isn't in the GenServer state — OTP ancestry, custom flags, or debugging context.
+NOT FOR: The process's main data (use get_process_state). Process vitals like memory/stacktrace (use get_process_info).`,
       inputSchema: {
         type: 'object',
         required: ['pid'],
@@ -232,9 +235,10 @@ Accepts a PID string like "<0.123.0>" or a registered process name.`,
     },
     {
       name: 'recompile_deps',
-      description: `Force recompile of Elixir dependencies.
+      description: `Force recompile Elixir dependencies (not the project itself).
 
-Use when a local path dependency has changed and needs recompiling, or to force-rebuild all deps. You MUST specify the args parameter.`,
+WHEN TO USE: When a local path dependency's source has changed, or to force-rebuild a specific dep. You MUST specify the args parameter.
+NOT FOR: Project code (use recompile or reload_module).`,
       inputSchema: {
         type: 'object',
         required: ['args'],
@@ -249,9 +253,10 @@ Use when a local path dependency has changed and needs recompiling, or to force-
     },
     {
       name: 'get_app_config',
-      description: `Get runtime application configuration. Unlike reading config files on disk, this returns what the BEAM actually has loaded — including runtime.exs overrides, env var substitutions, and dynamic Application.put_env changes.
+      description: `Get runtime application configuration — what the BEAM actually has loaded (not what's in the config files on disk). Includes runtime.exs overrides, env var substitutions, and dynamic Application.put_env changes.
 
-Returns all config for an app, or a specific key.`,
+WHEN TO USE: You need to check config values (ports, feature flags, module settings) as the running app sees them.
+NOT FOR: System health metrics (use get_system_stats). Process-level inspection (use get_process_info/state).`,
       inputSchema: {
         type: 'object',
         required: ['app'],
@@ -289,9 +294,10 @@ You MUST specify the app name. Use get_app_config or project_eval with Applicati
     },
     {
       name: 'list_ets_tables',
-      description: `List all ETS tables with metadata: name, size, memory usage, type, protection level, owner.
+      description: `List all ETS tables with metadata: name, row count, memory, type, protection, owner. Sorted by memory descending.
 
-Sorted by memory usage descending. Use to discover what ETS tables exist before inspecting their contents.`,
+WHEN TO USE: Discover what ETS tables exist, find tables using the most memory.
+NEXT STEP: Use inspect_ets_table with the table name to read its contents.`,
       inputSchema: {
         type: 'object',
         properties: {},
@@ -319,9 +325,10 @@ Use list_ets_tables first to find table names, then inspect specific tables.`,
     },
     {
       name: 'xref_callers',
-      description: `Find all callers of a module or function across the project using mix xref.
+      description: `Find all callers of a module or function across the project — "what depends on this?"
 
-Use for impact analysis before refactoring — "what calls this function?" or "what depends on this module?"`,
+WHEN TO USE: Impact analysis before refactoring. "What breaks if I change this function?" "Who calls this module?"
+NOT FOR: Understanding what a function does (use get_docs). Seeing runtime call flow (use trace_calls).`,
       inputSchema: {
         type: 'object',
         required: ['reference'],
