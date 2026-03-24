@@ -1,0 +1,17 @@
+# Elixir
+/_build/
+/deps/
+*.beam
+
+# Node/TypeScript
+/node_modules/
+/dist/
+package-lock.json
+
+# IDE
+.elixir_ls/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

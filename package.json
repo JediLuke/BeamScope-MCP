@@ -1,0 +1,28 @@
+{
+  "name": "@beam-scope-mcp/server",
+  "version": "0.1.0",
+  "description": "MCP server bridge for Elixir applications with reconnection support",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "beam-scope-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["mcp", "elixir", "phoenix", "automation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

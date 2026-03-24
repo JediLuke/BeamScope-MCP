@@ -1,0 +1,4 @@
+%{
+  "circular_buffer": {:hex, :circular_buffer, "0.4.2", "b088989532af3d1733d35a08933ec9a232a56d0f06a078739f05fe24965d91d2", [:mix], [], "hexpm", "bc5f4ba112bce88aa4692427a8b23aa5baddf7c810d5dc3e7696f398194f104e"},
+  "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
+}
