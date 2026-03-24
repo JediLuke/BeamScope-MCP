@@ -226,6 +226,10 @@ beam_scope_mcp/
 └── dist/                           # Compiled TypeScript (gitignored)
 ```
 
+## Tool Selection Eval
+
+Tool descriptions are optimized so LLMs select the correct tool for each task. See [EVAL.md](./EVAL.md) for 18 test scenarios and results (17/18 pass on Claude Opus 4.6).
+
 ## Migrating from TideWave
 
 See [MIGRATION_FROM_TIDEWAVE.md](./MIGRATION_FROM_TIDEWAVE.md) for a step-by-step guide.
