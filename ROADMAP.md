@@ -39,7 +39,11 @@
 
 - **`reload_module`** — Hot-reload a single module from its source file via `Code.compile_file/1`. Fastest feedback loop — change one file, reload just that module, test immediately. No full recompile needed.
 
-**Total: 19 tools implemented**
+### Code Intelligence (partial) ✅
+
+- **`xref_callers`** — Find all callers of a module or function via `Mix.Task.run("xref", ["callers", reference])`. Impact analysis before refactoring.
+
+**Total: 20 tools implemented**
 
 ---
 

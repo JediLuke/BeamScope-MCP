@@ -121,7 +121,7 @@ Add BeamScope to your project's `.mcp.json`:
 
 **Important:** The `BEAM_SCOPE_MCP_PORT` env var must match the port in your Elixir config. If it's missing, the TypeScript bridge will exit immediately with an error.
 
-## Available Tools (19)
+## Available Tools (20)
 
 ### Connection
 
@@ -170,6 +170,12 @@ Add BeamScope to your project's `.mcp.json`:
 | `list_ets_tables` | All ETS tables with size, memory, type, protection, owner. |
 | `inspect_ets_table` | Read ETS table contents with row limits and truncation. |
 
+### Code Intelligence
+
+| Tool | Description |
+|------|-------------|
+| `xref_callers` | Find all callers of a module or function via `mix xref`. Impact analysis before refactoring. |
+
 ### Tracing
 
 | Tool | Description |
@@ -211,6 +217,7 @@ beam_scope_mcp/
 │           ├── app_config.ex       # get_app_config
 │           ├── supervision_tree.ex # get_supervision_tree
 │           ├── ets.ex              # list_ets_tables, inspect_ets_table
+│           ├── xref.ex             # xref_callers
 │           └── trace.ex            # trace_calls, stop_trace (writes to /tmp/beam_scope_traces/)
 ├── src/
 │   ├── index.ts                    # MCP server entry point

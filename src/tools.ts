@@ -318,6 +318,22 @@ Use list_ets_tables first to find table names, then inspect specific tables.`,
       },
     },
     {
+      name: 'xref_callers',
+      description: `Find all callers of a module or function across the project using mix xref.
+
+Use for impact analysis before refactoring — "what calls this function?" or "what depends on this module?"`,
+      inputSchema: {
+        type: 'object',
+        required: ['reference'],
+        properties: {
+          reference: {
+            type: 'string',
+            description: 'Module or Module.function/arity (e.g. "Merlinex.Core.Manager" or "Enum.map/2")',
+          },
+        },
+      },
+    },
+    {
       name: 'trace_calls',
       description: `Start tracing function calls on a module. This tool does NOT return the trace results directly — it writes them to a file and returns the file path.
 
@@ -406,6 +422,8 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return await handleForward('list_ets_tables', args);
     case 'inspect_ets_table':
       return await handleForward('inspect_ets_table', args);
+    case 'xref_callers':
+      return await handleForward('xref_callers', args);
     case 'trace_calls':
       return await handleForward('trace_calls', args);
     case 'stop_trace':
