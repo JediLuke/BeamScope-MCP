@@ -139,6 +139,29 @@ Tools that operate on apps, processes, or tables require the caller to specify e
 
 Moved to implemented. Uses `Code.compile_file/1` to compile and load a single module.
 
+### Future Tool Ideas (brainstorm)
+
+#### Dependency graph / impact analysis
+`mix xref graph` shows module dependencies. A tool that returns which modules depend on the one you're about to change — before you refactor `Merlinex.Core.Manager`, know exactly what's downstream. Way more targeted than grep.
+
+#### Memory snapshot diffing
+Call `get_system_stats` twice with a label, then a `diff_snapshots` tool that shows what changed. "Memory went up 4MB, 12 new processes spawned, ETS table X grew by 500 rows." Instant leak detection.
+
+#### GenServer message interception
+Not tracing (which watches), but intercepting — queue up the next N messages to a process and show them before they're delivered. Like a breakpoint but non-blocking — messages still get delivered, you just get to see them first.
+
+#### Application dependency tree
+Not the supervision tree (process hierarchy) but the OTP application dependency tree. Which applications depend on which, in what order do they start, what happens if one crashes. Useful for understanding why an app restart cascades.
+
+#### Compile-time warning tracker
+Store the last compilation's warnings and make them queryable. "Show me all unused variable warnings in the agents directory." LLMs tend to ignore compiler warnings scrolling by in terminal output — a dedicated tool would make them hard to ignore.
+
+#### Process mailbox sampling
+Instead of dumping the whole message queue (dangerous), peek at a statistical sample. "This process has 1,247 messages queued, here are 5 representative ones." Enough to diagnose without the risk.
+
+#### State transition observer
+Watch a process over time and build a state transition diagram. "This GenServer went through these state shapes in the last 60 seconds." For an agent system especially, seeing the actual state flow through phases would be incredible for debugging. Could use the trace-to-file pattern — start observing, write state snapshots to a file, agent reads them later.
+
 ### Ideas considered but deprioritised
 
 - **Port discovery tool** — The tool descriptions already guide the LLM to look in the Elixir config files. A discovery tool would just be doing what the instructions already say.
