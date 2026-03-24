@@ -52,7 +52,8 @@ defmodule BeamScopeMcp.Tools.Ets do
 
     case params do
       %{"table" => table_name} when is_binary(table_name) ->
-        tab = String.to_atom(table_name)
+        # Try with and without Elixir. prefix
+        tab = resolve_table_name(table_name)
 
         case safe_ets_info(tab) do
           nil ->
@@ -85,6 +86,20 @@ defmodule BeamScopeMcp.Tools.Ets do
       _ ->
         {:error, "\"table\" parameter is required (e.g. \"my_cache\")"}
     end
+  end
+
+  defp resolve_table_name(name) do
+    candidates =
+      if String.starts_with?(name, "Elixir.") do
+        [name]
+      else
+        [name, "Elixir." <> name]
+      end
+
+    Enum.find_value(candidates, String.to_atom(name), fn candidate ->
+      atom = String.to_atom(candidate)
+      if safe_ets_info(atom), do: atom
+    end)
   end
 
   defp safe_ets_info(tab) do
