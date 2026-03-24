@@ -34,9 +34,9 @@ export function getToolDefinitions() {
     },
     {
       name: 'get_logs',
-      description: `Retrieve application logs from the running Elixir app. This is the ONLY way to see errors, warnings, and crash reports — no other tool provides log data. Must be called to know what's in the logs.
+      description: `Your primary debugging tool. Retrieve application logs from the running Elixir app — errors, warnings, crash reports, and application output. This is the ONLY source of log data; no other tool provides it.
 
-WHEN TO USE: Diagnosing problems, checking for errors, understanding what the app is doing. Should typically be your first step when something seems wrong.
+WHEN TO USE: First step when diagnosing any problem. Check logs before drawing conclusions from other tools.
 NOT FOR: System resource usage (use get_system_stats). Process-level details (use get_process_info).
 
 Use grep to filter (e.g. "error", "warning", "timeout") and level to filter by severity. Logs are in a circular buffer so old entries may be discarded.`,
