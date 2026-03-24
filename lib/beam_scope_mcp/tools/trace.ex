@@ -149,11 +149,13 @@ defmodule BeamScopeMcp.Tools.Trace do
       count
     end, 0})
 
-    # Set trace pattern
+    # Set trace pattern with match spec that includes return values
+    match_spec = [{:_, [], [{:return_trace}]}]
+
     if function do
-      :dbg.tp(module, function, :_)
+      :dbg.tp(module, function, match_spec)
     else
-      :dbg.tp(module, :_)
+      :dbg.tpl(module, match_spec)
     end
 
     # Trace all processes
