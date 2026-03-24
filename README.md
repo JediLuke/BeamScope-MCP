@@ -108,38 +108,53 @@ Add BeamScope to your project's `.mcp.json`:
 
 **Important:** The `BEAM_SCOPE_MCP_PORT` env var must match the port in your Elixir config. If it's missing, the TypeScript bridge will exit immediately with an error.
 
-## Available Tools
+## Available Tools (16)
 
-### `connect_beam_scope_mcp`
-Establish connection to the Elixir app. The port is pre-configured via environment variable — no parameters needed.
+### Connection
 
-### `get_beam_scope_mcp_status`
-Check current connection status.
+| Tool | Description |
+|------|-------------|
+| `connect_beam_scope_mcp` | Establish TCP connection. Port pre-configured via env var. |
+| `get_beam_scope_mcp_status` | Check current connection status. |
 
-### `get_logs`
-Retrieve application logs with optional filtering.
-```json
-{
-  "tail": 50,
-  "grep": "error",
-  "level": "error"
-}
-```
+### Core
 
-### `project_eval`
-Evaluate Elixir code in your running application.
-```json
-{
-  "code": "Enum.map([1,2,3], & &1 * 2)",
-  "timeout": 30000
-}
-```
+| Tool | Description |
+|------|-------------|
+| `get_logs` | Application logs with tail/grep/level filtering. |
+| `project_eval` | Evaluate Elixir code in the running app with timeout. |
+| `get_docs` | Local documentation for modules/functions via `Code.fetch_docs/1`. |
 
-### `get_docs`
-Get local documentation for a module or function.
-```json
-{ "reference": "String.split/2" }
-```
+### Compilation
+
+| Tool | Description |
+|------|-------------|
+| `recompile` | Recompile the project from within the BEAM. Returns errors/warnings. |
+| `recompile_deps` | Force recompile dependencies. Args required (e.g. `["--force"]`). |
+
+### System & Process Introspection
+
+| Tool | Description |
+|------|-------------|
+| `get_system_stats` | Memory, schedulers, process counts, uptime, IO stats. |
+| `list_processes` | Filterable/sortable process listing (by name, memory, queue size). |
+| `get_process_info` | Detailed info: function, memory, links, monitors, stacktrace. |
+| `get_process_state` | Internal state of GenServers via `:sys.get_state/1`. |
+| `get_process_dictionary` | Process dictionary metadata (Logger metadata, flags, etc.). |
+
+### Application & OTP
+
+| Tool | Description |
+|------|-------------|
+| `get_app_config` | Runtime application config (what the BEAM has loaded, not files on disk). |
+| `get_supervision_tree` | Recursive OTP supervision tree walk. App name required. |
+
+### ETS
+
+| Tool | Description |
+|------|-------------|
+| `list_ets_tables` | All ETS tables with size, memory, type, protection, owner. |
+| `inspect_ets_table` | Read ETS table contents with row limits and truncation. |
 
 ## Running Multiple Applications
 
@@ -163,12 +178,18 @@ beam_scope_mcp/
 │   ├── beam_scope_mcp.ex           # Public API
 │   └── beam_scope_mcp/
 │       ├── application.ex          # OTP Application (fail-loudly port config)
-│       ├── server.ex               # TCP GenServer
+│       ├── server.ex               # TCP GenServer + command dispatch
 │       ├── log_capture.ex          # Logger handler + circular buffer
 │       └── tools/
-│           ├── logs.ex             # get_logs implementation
-│           ├── eval.ex             # project_eval implementation
-│           └── docs.ex             # get_docs implementation
+│           ├── logs.ex             # get_logs
+│           ├── eval.ex             # project_eval
+│           ├── docs.ex             # get_docs
+│           ├── recompile.ex        # recompile, recompile_deps
+│           ├── system_stats.ex     # get_system_stats
+│           ├── processes.ex        # list_processes, get_process_info/state/dictionary
+│           ├── app_config.ex       # get_app_config
+│           ├── supervision_tree.ex # get_supervision_tree
+│           └── ets.ex              # list_ets_tables, inspect_ets_table
 ├── src/
 │   ├── index.ts                    # MCP server entry point
 │   ├── connection.ts               # TCP connection (requires BEAM_SCOPE_MCP_PORT env var)
