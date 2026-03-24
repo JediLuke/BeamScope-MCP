@@ -108,7 +108,7 @@ Add BeamScope to your project's `.mcp.json`:
 
 **Important:** The `BEAM_SCOPE_MCP_PORT` env var must match the port in your Elixir config. If it's missing, the TypeScript bridge will exit immediately with an error.
 
-## Available Tools (18)
+## Available Tools (19)
 
 ### Connection
 
@@ -130,6 +130,7 @@ Add BeamScope to your project's `.mcp.json`:
 | Tool | Description |
 |------|-------------|
 | `recompile` | Recompile the project from within the BEAM. Returns errors/warnings. |
+| `reload_module` | Hot-reload a single module from its source file. Fastest feedback loop. |
 | `recompile_deps` | Force recompile dependencies. Args required (e.g. `["--force"]`). |
 
 ### System & Process Introspection
@@ -191,7 +192,7 @@ beam_scope_mcp/
 │           ├── logs.ex             # get_logs
 │           ├── eval.ex             # project_eval
 │           ├── docs.ex             # get_docs
-│           ├── recompile.ex        # recompile, recompile_deps
+│           ├── recompile.ex        # recompile, reload_module, recompile_deps
 │           ├── system_stats.ex     # get_system_stats
 │           ├── processes.ex        # list_processes, get_process_info/state/dictionary
 │           ├── app_config.ex       # get_app_config

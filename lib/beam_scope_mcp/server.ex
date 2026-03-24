@@ -98,6 +98,9 @@ defmodule BeamScopeMcp.Server do
       {:ok, %{"action" => "recompile"} = params} ->
         handle_tool_result(BeamScopeMcp.Tools.Recompile.recompile(params))
 
+      {:ok, %{"action" => "reload_module"} = params} ->
+        handle_tool_result(BeamScopeMcp.Tools.Recompile.reload_module(params))
+
       {:ok, %{"action" => "get_system_stats"} = params} ->
         handle_tool_result(BeamScopeMcp.Tools.SystemStats.get_system_stats(params))
 

@@ -114,10 +114,28 @@ Examples:
 
 Returns compilation output including any errors or warnings. This gives a fast feedback loop without needing to shell out to mix compile.
 
-Note: this recompiles the project code only, not dependencies. Use project_eval with Mix.Task.run("deps.compile", ["--force"]) for deps.`,
+Note: this recompiles the project code only, not dependencies. Use recompile_deps for deps.`,
       inputSchema: {
         type: 'object',
         properties: {},
+      },
+    },
+    {
+      name: 'reload_module',
+      description: `Hot-reload a single module from its source file into the running BEAM.
+
+Compiles the file and loads the resulting module(s) without recompiling the whole project. This is the fastest possible feedback loop — change one file, reload just that module, test immediately.
+
+Use this instead of recompile when you've only changed a single file.`,
+      inputSchema: {
+        type: 'object',
+        required: ['file'],
+        properties: {
+          file: {
+            type: 'string',
+            description: 'Full path to the .ex or .exs file to reload (e.g. "/home/luke/workbench/flx/merlinex/lib/my_module.ex")',
+          },
+        },
       },
     },
     {
@@ -366,6 +384,8 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return await handleGetDocs(args);
     case 'recompile':
       return await handleForward('recompile', args);
+    case 'reload_module':
+      return await handleForward('reload_module', args);
     case 'get_system_stats':
       return await handleForward('get_system_stats', args);
     case 'list_processes':

@@ -35,7 +35,11 @@
 - **`project_eval`** — Evaluate Elixir code in the running app with timeout
 - **`get_docs`** — Local documentation for modules/functions via `Code.fetch_docs/1`
 
-**Total: 18 tools implemented**
+### Hot Code Loading ✅
+
+- **`reload_module`** — Hot-reload a single module from its source file via `Code.compile_file/1`. Fastest feedback loop — change one file, reload just that module, test immediately. No full recompile needed.
+
+**Total: 19 tools implemented**
 
 ---
 
@@ -131,9 +135,9 @@ Tools that operate on apps, processes, or tables require the caller to specify e
 
 ## Additional Ideas & Notes
 
-### Hot code loading (candidate for Phase 2)
+### Hot code loading ✅ (implemented as `reload_module`)
 
-Reload a single compiled module without recompiling the whole project. `Code.compile_file/1` + `Code.load_file/1`. Faster than full recompile for single-file iteration.
+Moved to implemented. Uses `Code.compile_file/1` to compile and load a single module.
 
 ### Ideas considered but deprioritised
 
