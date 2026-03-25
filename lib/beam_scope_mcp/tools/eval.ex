@@ -54,10 +54,32 @@ defmodule BeamScopeMcp.Tools.Eval do
     {{success?, result}, io} =
       capture_io(fn ->
         try do
-          {result, _bindings} = Code.eval_string(code, [], env())
-          {true, result}
+          # Use with_diagnostics to capture compiler warnings/errors as data.
+          # Without this, compile errors go to :standard_error and are invisible.
+          {eval_result, diagnostics} = Code.with_diagnostics(fn ->
+            Code.eval_string(code, [], env())
+          end)
+
+          case diagnostics do
+            [] ->
+              {result, _bindings} = eval_result
+              {true, result}
+            diags ->
+              {result, _bindings} = eval_result
+              diag_text = Enum.map_join(diags, "\n", fn d ->
+                pos = case d.position do
+                  {line, col} -> "#{line}:#{col}"
+                  line when is_integer(line) -> "#{line}"
+                  other -> inspect(other)
+                end
+                "#{d.severity}: #{d.message} (#{d.file}:#{pos})"
+              end)
+              IO.puts(diag_text)
+              {true, result}
+          end
         catch
           kind, reason ->
+            # Also try to capture diagnostics from failed compilation
             {false, Exception.format(kind, reason, __STACKTRACE__)}
         end
       end)

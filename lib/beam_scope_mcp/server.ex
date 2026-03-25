@@ -43,7 +43,9 @@ defmodule BeamScopeMcp.Server do
     case :gen_tcp.accept(listen_socket) do
       {:ok, client} ->
         Logger.info("BeamScopeMcp: Client connected")
-        {:noreply, Map.put(state, :client, client), {:continue, :recv_loop}}
+        pid = spawn_link(fn -> client_loop(client) end)
+        :gen_tcp.controlling_process(client, pid)
+        {:noreply, state, {:continue, :accept}}
 
       {:error, reason} ->
         Logger.error("Failed to accept connection: #{inspect(reason)}")
@@ -51,22 +53,21 @@ defmodule BeamScopeMcp.Server do
     end
   end
 
-  def handle_continue(:recv_loop, %{client: client} = state) do
+  # Per-client handler loop — runs in its own process
+  defp client_loop(client) do
     case :gen_tcp.recv(client, 0) do
       {:ok, data} ->
         response = handle_message(String.trim(data))
         json_response = Jason.encode!(response) <> "\n"
         :gen_tcp.send(client, json_response)
-        {:noreply, state, {:continue, :recv_loop}}
+        client_loop(client)
 
       {:error, :closed} ->
-        Logger.info("BeamScopeMcp: Client disconnected, waiting for reconnection...")
-        {:noreply, Map.delete(state, :client), {:continue, :accept}}
+        :ok
 
       {:error, reason} ->
-        Logger.error("Error receiving data: #{inspect(reason)}")
+        Logger.error("BeamScopeMcp: Client error: #{inspect(reason)}")
         :gen_tcp.close(client)
-        {:noreply, Map.delete(state, :client), {:continue, :accept}}
     end
   end
 

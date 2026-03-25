@@ -34,13 +34,25 @@ defmodule BeamScopeMcp.Tools.Recompile do
   - "args" (optional) — list of args, e.g. ["--force"] or ["jason", "--force"]
   """
   def recompile_deps(%{"args" => args}) when is_list(args) and length(args) > 0 do
+    # Extract dep name from args (first arg that isn't a flag)
+    dep_name = Enum.find(args, fn a -> not String.starts_with?(a, "-") end)
+
     {output, _result} = capture_io_and_result(fn ->
       Mix.Task.reenable("deps.compile")
       Mix.Task.run("deps.compile", args)
     end)
 
-    msg = if output == "", do: "Dependencies recompiled successfully", else: output
-    {:ok, msg}
+    # Purge old module bytecode so the VM loads fresh .beam files on next call.
+    # Without this, deps.compile writes new beams to disk but the VM keeps
+    # running the old code — changes don't take effect until app restart.
+    purged = if dep_name do
+      purge_dep_modules(dep_name)
+    else
+      0
+    end
+
+    base_msg = if output == "", do: "Dependencies recompiled successfully", else: output
+    {:ok, "#{base_msg} (#{purged} modules purged)"}
   rescue
     e ->
       {:error, "Recompile deps failed: #{Exception.message(e)}"}
@@ -61,30 +73,41 @@ defmodule BeamScopeMcp.Tools.Recompile do
       {:error, "File not found: #{file_path}"}
     else
       {output, result} = capture_io_and_result(fn ->
-        try do
-          modules = Code.compile_file(file_path)
+        {compile_result, diagnostics} = Code.with_diagnostics(fn ->
+          try do
+            modules = Code.compile_file(file_path)
 
-          module_names =
-            modules
-            |> Enum.map(fn {mod, _bytecode} ->
-              mod |> Atom.to_string() |> String.replace("Elixir.", "")
-            end)
+            module_names =
+              modules
+              |> Enum.map(fn {mod, _bytecode} ->
+                mod |> Atom.to_string() |> String.replace("Elixir.", "")
+              end)
 
-          {:ok, module_names}
-        rescue
-          e -> {:error, Exception.format(:error, e, __STACKTRACE__)}
-        end
+            {:ok, module_names}
+          rescue
+            e -> {:error, Exception.format(:error, e, __STACKTRACE__)}
+          end
+        end)
+
+        diag_text = format_diagnostics(diagnostics)
+        {compile_result, diag_text}
       end)
 
-      case result do
+      {compile_result, diag_text} = result
+
+      case compile_result do
         {:ok, module_names} ->
           names = Enum.join(module_names, ", ")
           msg = "Reloaded #{length(module_names)} module(s): #{names}"
+          msg = if diag_text != "", do: msg <> "\n\nDiagnostics:\n#{diag_text}", else: msg
           msg = if output != "", do: msg <> "\n\nOutput:\n#{output}", else: msg
           {:ok, msg}
 
         {:error, error_msg} ->
-          {:ok, "Reload failed:\n\n#{error_msg}\n\n#{output}"}
+          msg = "Reload failed:\n\n#{error_msg}"
+          msg = if diag_text != "", do: msg <> "\n\nDiagnostics:\n#{diag_text}", else: msg
+          msg = if output != "", do: msg <> "\n\nOutput:\n#{output}", else: msg
+          {:ok, msg}
       end
     end
   end
@@ -95,6 +118,36 @@ defmodule BeamScopeMcp.Tools.Recompile do
 
   def recompile_deps(_params) do
     {:error, "\"args\" parameter is required. Examples: [\"--force\"] for all deps, [\"jason\", \"--force\"] for a single dep."}
+  end
+
+  defp purge_dep_modules(dep_name) do
+    dep_path = Path.join([Mix.Project.build_path(), "lib", dep_name]) |> to_charlist()
+
+    modules = :code.all_loaded()
+    |> Enum.filter(fn {_mod, path} ->
+      is_list(path) and List.starts_with?(path, dep_path)
+    end)
+
+    Enum.each(modules, fn {mod, _path} ->
+      :code.purge(mod)
+      case :code.load_file(mod) do
+        {:module, _} -> :ok
+        {:error, _} -> :code.ensure_loaded(mod)
+      end
+    end)
+
+    length(modules)
+  end
+
+  defp format_diagnostics(diagnostics) do
+    Enum.map_join(diagnostics, "\n", fn d ->
+      pos = case d.position do
+        {line, col} -> "#{line}:#{col}"
+        line when is_integer(line) -> "#{line}"
+        other -> inspect(other)
+      end
+      "#{d.severity}: #{d.message} (#{d.file}:#{pos})"
+    end)
   end
 
   defp capture_io_and_result(fun) do
