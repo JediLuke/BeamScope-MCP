@@ -89,7 +89,7 @@ Optionally allow env var override:
 
 ```elixir
 # config/runtime.exs
-if port = System.get_env("BEAM_SCOPE_MCP_PORT") do
+if port == System.get_env("BEAM_SCOPE_MCP_PORT") do
   config :beam_scope_mcp, port: String.to_integer(port)
 end
 ```
